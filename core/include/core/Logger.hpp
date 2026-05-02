@@ -10,7 +10,7 @@ namespace vetalmed::core {
 
 class Logger {
 public:
-    enum class Level { DEBUG, INFO, WARN, ERROR };
+    enum class Level { DEBUG, INFO, WARN, ERR };
     
     static void init();
     static void log(Level level, const std::string &component, const std::string &message);

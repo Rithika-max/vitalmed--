@@ -9,10 +9,10 @@ bool OllamaHealthChecker::isOllamaOnline(const std::string &ollamaUrl) {
     return false;
 }
 
-nlohmann::json OllamaHealthChecker::getHealthStatus(const std::string &ollamaUrl) {
-    nlohmann::json status;
+Json::Value OllamaHealthChecker::getHealthStatus(const std::string &ollamaUrl) {
+    Json::Value status(Json::objectValue);
     status["ollama"] = "offline";
-    status["models"] = nlohmann::json::array();
+    status["models"] = Json::Value(Json::arrayValue);
     return status;
 }
 

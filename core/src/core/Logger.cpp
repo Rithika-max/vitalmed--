@@ -33,7 +33,7 @@ std::string Logger::levelToString(Level level) {
         case Level::DEBUG: return "DEBUG";
         case Level::INFO: return "INFO";
         case Level::WARN: return "WARN";
-        case Level::ERROR: return "ERROR";
+        case Level::ERR: return "ERROR";
         default: return "UNKNOWN";
     }
 }
@@ -90,7 +90,7 @@ void Logger::warn(const std::string &component, const std::string &message) {
 }
 
 void Logger::error(const std::string &component, const std::string &message) {
-    log(Level::ERROR, component, message);
+    log(Level::ERR, component, message);
 }
 
 }

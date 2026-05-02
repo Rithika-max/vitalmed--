@@ -7,7 +7,8 @@
 #include "upload/DataQualityChecker.hpp"
 #include "upload/AutoPipelineRouter.hpp"
 #include "upload/StorageRouter.hpp"
-#include "core/StorageManager.hpp"
+#include "core/Logger.hpp"
+#include <drogon/MultiPart.h>
 #define NOMINMAX
 #include <drogon/HttpAppFramework.h>
 #include <filesystem>
@@ -24,22 +25,32 @@ using vetalmed::core::StorageManager;
 namespace vetalmed::upload {
 
 std::string FileReceiver::receive(const drogon::HttpRequestPtr &req, std::string &filename, std::string &error) {
-    const auto &files = req->getFiles();
-    if (files.empty()) {
-        error = "No file uploaded.";
+    Logger::info("FileReceiver", "Starting file receive");
+    drogon::MultiPartParser fileUpload;
+    if (fileUpload.parse(req) != 0) {
+        error = "Failed to parse multipart request.";
+        Logger::error("FileReceiver", error);
         return {};
     }
-    const auto &file = files.front();
+    if (fileUpload.getFiles().size() != 1) {
+        error = "Expected exactly one file, got " + std::to_string(fileUpload.getFiles().size());
+        Logger::error("FileReceiver", error);
+        return {};
+    }
+    const auto &file = fileUpload.getFiles()[0];
     filename = file.getFileName();
+    Logger::info("FileReceiver", "Received file: " + filename);
     const auto uploadsDir = StorageManager::uploadsPath();
+    Logger::info("FileReceiver", "Uploads dir: " + uploadsDir.string());
     fs::create_directories(uploadsDir);
     const auto destination = uploadsDir / filename;
-    try {
-        fs::copy_file(file.getPathName(), destination, fs::copy_options::overwrite_existing);
-    } catch (const std::exception &ex) {
-        error = std::string("File save failed: ") + ex.what();
+    Logger::info("FileReceiver", "Destination: " + destination.string());
+    if (file.saveAs(destination.string()) != 0) {
+        error = "File save failed.";
+        Logger::error("FileReceiver", error);
         return {};
     }
+    Logger::info("FileReceiver", "File saved successfully");
     return destination.string();
 }
 

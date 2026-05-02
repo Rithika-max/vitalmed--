@@ -1,7 +1,8 @@
 #include "server/HealthController.hpp"
 #include "core/OllamaHealthChecker.hpp"
 #include "core/StorageManager.hpp"
-#include <nlohmann/json.hpp>
+#include "core/Logger.hpp"
+#include <json/json.h>
 #include <sqlite3.h>
 #include <filesystem>
 
@@ -15,7 +16,7 @@ void HealthController::health(const drogon::HttpRequestPtr &req,
     Logger::info("HealthController", "Health check called");
 
     auto ollamaStatus = OllamaHealthChecker::getHealthStatus();
-    bool ollamaOnline = ollamaStatus["ollama"] == "online";
+    bool ollamaOnline = ollamaStatus["ollama"].asString() == "online";
 
     bool storageOk = fs::exists(StorageManager::uploadsPath()) &&
                      fs::exists(StorageManager::extractedPath()) &&
@@ -41,15 +42,14 @@ void HealthController::health(const drogon::HttpRequestPtr &req,
         datasetsLoaded = false;
     }
 
-    nlohmann::json response = {
-        {"backend", "running"},
-        {"status", "ok"},
-        {"port", 3003},
-        {"storage", storageOk ? "ok" : "error"},
-        {"datasets_loaded", datasetsLoaded},
-        {"dataset_count", datasetCount},
-        {"ollama", ollamaOnline ? "online" : "offline"}
-    };
+    Json::Value response(Json::objectValue);
+    response["backend"] = "running";
+    response["status"] = "ok";
+    response["port"] = 3003;
+    response["storage"] = storageOk ? "ok" : "error";
+    response["datasets_loaded"] = datasetsLoaded;
+    response["dataset_count"] = datasetCount;
+    response["ollama"] = ollamaOnline ? "online" : "offline";
 
     auto resp = drogon::HttpResponse::newHttpJsonResponse(response);
     resp->addHeader("Access-Control-Allow-Origin", "*");

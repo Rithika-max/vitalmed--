@@ -8,6 +8,7 @@
 #include "upload/DataQualityChecker.hpp"
 #include "upload/AutoPipelineRouter.hpp"
 #include "upload/StorageRouter.hpp"
+#include <json/json.h>
 #include "core/Logger.hpp"
 #include <nlohmann/json.hpp>
 
@@ -17,13 +18,17 @@ using namespace vetalmed::core;
 
 void UploadController::upload(const drogon::HttpRequestPtr &req,
                               std::function<void(const drogon::HttpResponsePtr &)> &&callback) {
-    std::string filename;
-    std::string error;
-    const std::string path = FileReceiver::receive(req, filename, error);
+    try {
+        std::string filename;
+        std::string error;
+        const std::string path = FileReceiver::receive(req, filename, error);
     
     if (path.empty()) {
         Logger::warn("UploadController", "File receive failed: " + error);
-        auto resp = drogon::HttpResponse::newHttpJsonResponse({{"success", false}, {"message", error}});
+        Json::Value errorResp(Json::objectValue);
+        errorResp["success"] = false;
+        errorResp["message"] = error;
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(errorResp);
         resp->setStatusCode(drogon::k400BadRequest);
         resp->addHeader("Access-Control-Allow-Origin", "*");
         callback(resp);
@@ -34,7 +39,10 @@ void UploadController::upload(const drogon::HttpRequestPtr &req,
 
     if (!FileValidator::validate(filename, path, error)) {
         Logger::warn("UploadController", "File validation failed: " + error);
-        auto resp = drogon::HttpResponse::newHttpJsonResponse({{"success", false}, {"message", error}});
+        Json::Value errorResp(Json::objectValue);
+        errorResp["success"] = false;
+        errorResp["message"] = error;
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(errorResp);
         resp->setStatusCode(drogon::k400BadRequest);
         resp->addHeader("Access-Control-Allow-Origin", "*");
         callback(resp);
@@ -51,7 +59,10 @@ void UploadController::upload(const drogon::HttpRequestPtr &req,
     if (content.empty()) {
         error = "Failed to extract file content from uploaded file.";
         Logger::error("UploadController", error);
-        auto resp = drogon::HttpResponse::newHttpJsonResponse({{"success", false}, {"message", error}});
+        Json::Value errorResp(Json::objectValue);
+        errorResp["success"] = false;
+        errorResp["message"] = error;
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(errorResp);
         resp->setStatusCode(drogon::k500InternalServerError);
         resp->addHeader("Access-Control-Allow-Origin", "*");
         callback(resp);
@@ -73,7 +84,10 @@ void UploadController::upload(const drogon::HttpRequestPtr &req,
     int metadataId = -1;
     if (!StorageRouter::persist(filename, fileType, content, schema, metadataId, error)) {
         Logger::error("UploadController", "Failed to persist metadata: " + error);
-        auto resp = drogon::HttpResponse::newHttpJsonResponse({{"success", false}, {"message", error}});
+        Json::Value errorResp(Json::objectValue);
+        errorResp["success"] = false;
+        errorResp["message"] = error;
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(errorResp);
         resp->setStatusCode(drogon::k500InternalServerError);
         resp->addHeader("Access-Control-Allow-Origin", "*");
         callback(resp);
@@ -83,17 +97,26 @@ void UploadController::upload(const drogon::HttpRequestPtr &req,
     Logger::info("UploadController", "File metadata saved with id: " + std::to_string(metadataId));
 
     const std::string pipeline = (structured ? "structured" : "unstructured");
-    nlohmann::json payload = {
-        {"success", true},
-        {"message", "File uploaded and processed successfully."},
-        {"filename", filename},
-        {"file_type", fileType},
-        {"status", "processed"},
-        {"pipeline", pipeline},
-        {"metadata_id", metadataId}
-    };
+    Json::Value payload(Json::objectValue);
+    payload["success"] = true;
+    payload["message"] = "File uploaded and processed successfully.";
+    payload["filename"] = filename;
+    payload["file_type"] = fileType;
+    payload["status"] = "processed";
+    payload["pipeline"] = pipeline;
+    payload["metadata_id"] = metadataId;
     
     auto resp = drogon::HttpResponse::newHttpJsonResponse(payload);
     resp->addHeader("Access-Control-Allow-Origin", "*");
     callback(resp);
+    } catch (...) {
+        Logger::error("UploadController", "Unknown exception in upload");
+        Json::Value errorResp(Json::objectValue);
+        errorResp["success"] = false;
+        errorResp["message"] = "Internal server error during upload";
+        auto resp = drogon::HttpResponse::newHttpJsonResponse(errorResp);
+        resp->setStatusCode(drogon::k500InternalServerError);
+        resp->addHeader("Access-Control-Allow-Origin", "*");
+        callback(resp);
+    }
 }

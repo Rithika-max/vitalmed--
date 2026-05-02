@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Drogon REQUIRED)
 find_package(nlohmann_json REQUIRED)
-find_package(SQLite3 REQUIRED)
+find_library(SQLITE3_LIBRARY sqlite3)
 
 if(ENABLE_FAISS)
     find_package(FAISS)
@@ -19,6 +19,7 @@ set(SOURCES
     src/server/HealthController.cpp
     src/server/UploadController.cpp
     src/server/ChatController.cpp
+    src/server/HttpServer.cpp
     src/core/Validator.cpp
     src/core/MemoryHook.cpp
     src/core/IntentParser.cpp
@@ -40,7 +41,7 @@ add_executable(erp_ai_backend ${SOURCES})
 target_link_libraries(erp_ai_backend
     Drogon::Drogon
     nlohmann_json::nlohmann_json
-    sqlite3
+    ${SQLITE3_LIBRARY}
 )
 
 if(ENABLE_FAISS AND FAISS_FOUND)

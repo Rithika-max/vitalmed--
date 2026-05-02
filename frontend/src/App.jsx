@@ -87,16 +87,28 @@ function App() {
 
   const sendChat = async () => {
     if (!chatQuery.trim()) return;
-    setLoading(true);
+
     const newMessages = [...messages, { role: 'user', text: chatQuery }];
     setMessages(newMessages);
+
+    if (!backendConnected) {
+      const assistantText = backendMessage || 'Unable to get answer. Backend is not connected.';
+      setMessages([...newMessages, { role: 'assistant', text: assistantText }]);
+      setChatQuery('');
+      return;
+    }
+
+    setLoading(true);
     try {
       const response = await axios.post(`${API_BASE_URL}/chat`, { query: chatQuery, session_id: 'default' });
-      const assistantText = response.data.summary || 'No response';
+      const assistantText = response.data?.summary || response.data?.message || 'No response';
       setMessages([...newMessages, { role: 'assistant', text: assistantText }]);
     } catch (error) {
-      console.error(error);
-      setMessages([...newMessages, { role: 'assistant', text: 'Unable to get answer.' }]);
+      console.error('Chat request failed', error);
+      const serverSummary = error?.response?.data?.summary;
+      const serverMessage = error?.response?.data?.message;
+      const assistantText = serverSummary || serverMessage || `Unable to get answer: ${error?.message || 'Server error.'}`;
+      setMessages([...newMessages, { role: 'assistant', text: assistantText }]);
     } finally {
       setLoading(false);
       setChatQuery('');
@@ -115,14 +127,20 @@ function App() {
     }
 
     try {
-      await axios.delete(`${API_BASE_URL}/datasets/${fileId}`);
-      setUploadMessage(`File "${fileName}" deleted successfully.`);
+      const response = await axios.delete(`${API_BASE_URL}/datasets/${fileId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      setDatasets((current) => current.filter((dataset) => dataset.id !== fileId));
+      setUploadMessage(response.data?.message || `File "${fileName}" deleted successfully.`);
       fetchDatasets();
       setTimeout(() => setUploadMessage(''), 3000);
     } catch (error) {
       const errorMessage = error?.response?.data?.message || 'Failed to delete file.';
       setUploadMessage(`Delete failed: ${errorMessage}`);
-      console.error(error);
+      console.error('Delete dataset failed', { fileId, fileName, error });
     }
   };
 
