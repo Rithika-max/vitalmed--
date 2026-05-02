@@ -1,0 +1,73 @@
+# Node/Vite
+node_modules/
+/npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+/dist
+/.turbo
+
+# Vite
+/.cache
+
+# Build directories
+/build/
+/core/build/
+/frontend/node_modules/
+/frontend/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Visual Studio
+*.vcxproj*
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+ipch/
+obj/
+*.pdb
+*.ilk
+*.log
+*.vs/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeLists.txt.user
+install_manifest.txt
+
+# vcpkg
+/vcpkg/installed/
+/vcpkg/buildtrees/
+/vcpkg/packages/
+/vcpkg/archives/
+/vcpkg/patches/
+/vcpkg/downloads/
+/vcpkg/scripts/log/
+
+# Logs
+*.log
+storage/logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# IDE
+.vscode/
+
+# Local build and dependency artifacts
+build_core/
+storage/
+/vcpkg/
+drogon-src/
+*.zip
